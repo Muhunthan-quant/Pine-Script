@@ -1,0 +1,54 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Future_Billi0naire_
+
+//@version=5
+indicator("SIP Performance Analyzer", overlay = true)
+
+// Variables to track the investment
+var float totalInvested = 0.0
+var float sharesBought = 0.0
+var int buyCount = 0
+var float initialTime = na
+var int lastMonth = na
+var label myLabel1 = na
+var label myLabel2 = na
+
+//Input
+var float monthlySIP = input(1000, "Monthly SIP amount")
+
+// Function to check if today is the first trading day of the month
+isFirstTradingDayOfMonth() =>
+    var bool firstDay = false
+    if (na(lastMonth) or lastMonth != month(time))
+        firstDay := true
+    else
+        firstDay := false
+    firstDay
+        
+// Update the total invested amount and set the initial investment time
+float numberOfShares = monthlySIP / close
+if (isFirstTradingDayOfMonth())
+    lastMonth := month(time)
+    sharesBought := sharesBought + numberOfShares
+    totalInvested := totalInvested + close * numberOfShares
+    buyCount := buyCount + 1
+    if (buyCount == 1)
+        initialTime := time
+
+// Calculate the current value of the investment
+currentValue = math.round(close * sharesBought * 100) / 100
+monthsInvested = buyCount
+yearsInvested = monthsInvested/12
+
+// Calculate CAGR
+days = (time - initialTime) / (1000 * 60 * 60 * 24)
+years = days / 365.25
+cagr = na(currentValue) or na(totalInvested) or totalInvested == 0 ? na : (math.pow(currentValue / totalInvested, 1 / years) - 1) * 100
+absoluteReturn = ((currentValue - totalInvested)/totalInvested)*100
+
+// Create a label showing CAGR, shares bought, and total invested
+if (bar_index == last_bar_index)
+    myLabel1:=label.new(x=bar_index + 15, y=high, text= "SIP INFO" +"\nTotal Investment: Rs." + str.tostring(totalInvested, "#") + "\nCurrent Value : Rs." + str.tostring(currentValue, "#")+ "\nCAGR: " + str.tostring(cagr, format.percent) + "\nAbsolute return: " + str.tostring(absoluteReturn, format.percent) + "\n\nShares Bought: " + str.tostring(sharesBought, "#") + "\nMonths Invested : " + str.tostring(monthsInvested) + "\nYears Invested : " + str.tostring(yearsInvested, "#.#") , style=label.style_label_down, color=color.blue, textcolor=color.white, size=size.small)
+    label.delete(myLabel1[1])
+    myLabel2:=label.new(x=bar_index + 15, y=high, text= "Variable INFO" + "\nMonthly SIP : " + str.tostring(monthlySIP), style=label.style_label_up, color=color.purple, textcolor=color.white, size=size.small)
+    label.delete(myLabel2[1])
