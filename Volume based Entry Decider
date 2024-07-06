@@ -1,0 +1,24 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Future_Billi0naire_
+
+//@version=5
+indicator("Volume based entry Decider", overlay=true)
+
+// Input
+avgPeriod = input.int(title="Average Volume Lookback Period", defval=60, minval=1)
+percentOfVolume = input.float(0.5, "Participation in Average Volume")
+
+// Calculation
+todayVolume = volume
+avgVolume = ta.sma(volume, avgPeriod)
+deployAmount = avgVolume * percentOfVolume
+sharesToBuy = deployAmount / close
+relativeVolume = todayVolume / avgVolume
+
+// Creation of Labels
+var label myLabel1 = na
+var label myLabel2 = na
+myLabel1 := label.new(x = bar_index + 20, y = high, text = "Safe to Deploy(Amount) : " + str.tostring(deployAmount, "#") + "\nSafe to Buy : " + str.tostring(sharesToBuy, "#") + " shares" + "\n\nVolume : " + str.tostring(todayVolume) + "\nAverage Volume : " + str.tostring(avgVolume, "#") + "\nRelative Volume : " + str.tostring(relativeVolume, "#.#") + "X", style = label.style_label_down, color = color.blue, textcolor = color.white, size = size.small)
+label.delete(myLabel1[1])
+myLabel2 := label.new(x = bar_index + 20, y = high, text = "Variable INFO" + "\nParticipation in Average Volume  : " + str.tostring(percentOfVolume) + " %" + "\nAverage Volume Period : " + str.tostring(avgPeriod, "#"), style = label.style_label_up, color = color.purple, textcolor = color.white, size = size.small)
+label.delete(myLabel2[1])
