@@ -1,0 +1,93 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Future_Billi0naire_
+
+//@version=5
+indicator("CAGR - Candle based BackTester", overlay=true)
+
+// Variable initialization
+var times = array.new_int(0)
+var float[] closePrices = array.new_float(0)
+var float[] totalInvested = array.new_float(0)
+var float[] sharesBought = array.new_float(0)
+var float[] storeCAGR = array.new_float(0)
+var float numberOfShares = 0
+var float totalInvested1 = 0.0
+var label myLabel1 = na
+var float totalCAGR = 0.0
+var int validCAGRs = 0
+var int smoothen = na
+var int outperform = 0
+var float numberOfSharesLumpsum = 0.0
+var float totalInvestedLumpsum = 0.0
+var float sharesBoughtLumpsum = 0.0
+var int buyCountLumpsum = 0
+var float initialTimeLumpsum = na
+var float currentValueLumpsum = na
+var float currentValueLumpsumx = na
+
+//Input
+var int startDate = input.time(timestamp("2017-01-02 00:00"), "Candle Date")
+doSmoothing = input.string("Yes", title="CAGR Smoothing", options=["No", "Yes"])
+var int lagCAGR = input(52, "DTF - 230 | WTF - 52 | YTF - 12")
+var float lumpsumAmount = input(10000, "Lumpsum amount")
+
+//Calculation
+numberOfShares := lumpsumAmount / close
+totalInvested1 := close * numberOfShares
+numberOfSharesLumpsum := lumpsumAmount / close
+
+//Pushing Values into Array
+array.push(closePrices, close)
+array.push(times, time)
+array.push(sharesBought, numberOfShares)
+array.push(totalInvested, totalInvested1)
+
+//Determining Smoothing functionality
+if doSmoothing == "Yes"
+    smoothen := lagCAGR
+else
+    smoothen := 0
+
+//Candle's CAGR Calculation
+if(time >= startDate and buyCountLumpsum == 0) 
+    sharesBoughtLumpsum := numberOfSharesLumpsum
+    totalInvestedLumpsum := totalInvestedLumpsum + close * numberOfSharesLumpsum
+    buyCountLumpsum := buyCountLumpsum + 1
+    if (buyCountLumpsum == 1)
+        initialTimeLumpsum := time
+
+//Date formatting
+monthName(m) => m == 1 ? "Jan" : m == 2 ? "Feb" : m == 3 ? "Mar" : m == 4 ? "Apr" : m == 5 ? "May" : m == 6 ? "Jun" : m == 7 ? "Jul" : m == 8 ? "Aug" : m == 9 ? "Sep" : m == 10 ? "Oct" : m == 11 ? "Nov" : "Dec"
+startDateString = str.tostring(dayofmonth(startDate)) + " " + monthName(month(startDate)) + " " + str.tostring(year(startDate))
+
+// Calculating the CAGR for each candle
+if (bar_index == last_bar_index)
+    //Candle's CAGR Calculation
+    currentValueLumpsum := math.round(close[smoothen] * sharesBoughtLumpsum * 100) / 100
+    currentValueLumpsumx := math.round(close * sharesBoughtLumpsum * 100) / 100
+    daysLumpsum = (time - initialTimeLumpsum) / (1000 * 60 * 60 * 24)
+    yearsLumpsum = daysLumpsum / 365.25
+    cagrLumpsum = (math.pow(currentValueLumpsum / totalInvestedLumpsum, 1 / yearsLumpsum) - 1) * 100
+    //Average candles CAGR Calculation
+    for i = 0 to array.size(closePrices) - 2
+        closeStored = array.get(closePrices, i)
+        timeStored = array.get(times, i)
+        sharesBoughtStored = array.get(sharesBought, i)
+        totalInvestedStored = array.get(totalInvested, i)
+        currentValue = math.round(close[smoothen] * sharesBoughtStored * 100) / 100
+        days = (time - timeStored) / (1000 * 60 * 60 * 24)
+        years = days / 365.25
+        currentCAGR = (math.pow(currentValue / totalInvestedStored, 1 / years) - 1) * 100
+        array.push(storeCAGR, currentCAGR)
+        totalCAGR := currentCAGR + totalCAGR
+        validCAGRs := 1 + validCAGRs
+        if cagrLumpsum > currentCAGR
+            outperform := outperform + 1
+        
+    //Result Calculation        
+    outperformPercentage = (outperform / (bar_index + 1)) * 100
+    avgCAGR = totalCAGR / validCAGRs
+    relativeReturn = (currentValueLumpsumx - lumpsumAmount) / lumpsumAmount
+    //Output
+    myLabel1 := label.new(x = last_bar_index + 15, y = high, text = startDateString + " Candle's CAGR : " + str.tostring(cagrLumpsum, "#.##") + "%" + "\nAverage CAGR of all Candles : " + str.tostring(avgCAGR, "#.##") + "%" +  "\nAlpha : " + str.tostring(cagrLumpsum - avgCAGR, "#.##") + "%" + "\n " + startDateString + " Candle's Outperformance Percentage : " + str.tostring(outperformPercentage, format.percent) + "\nTotal number of Candles : " + str.tostring(bar_index - smoothen + 1) + "\n\nRs." + str.tostring(lumpsumAmount) + " invested at " + startDateString + " would has become Rs." + str.tostring(currentValueLumpsumx, "#") + "\n(" + str.tostring(relativeReturn, "#.#") + "X return)", style = label.style_label_down, color = color.yellow, textcolor = color.black, size = size.small)
+    label.delete(myLabel1[1])
